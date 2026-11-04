@@ -1,9 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { FAQS } from '@/data/tour';
 
 export default function Faq() {
+  const [faqs, setFaqs] = useState(FAQS);
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/faq/')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch FAQ');
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setFaqs(data);
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching FAQ:', err);
+      });
+  }, []);
 
   return (
     <section id="faq" className="bg-navy-50 py-24 md:py-32">
@@ -14,10 +31,10 @@ export default function Faq() {
         </div>
 
         <div className="mt-12 divide-y divide-navy-100 overflow-hidden rounded-2xl bg-white shadow-sm">
-          {FAQS.map((item, index) => {
+          {faqs.map((item, index) => {
             const isOpen = openIndex === index;
             return (
-              <div key={item.question} className="faq-item">
+              <div key={item.question || index} className="faq-item">
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? null : index)}

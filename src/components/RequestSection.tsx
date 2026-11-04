@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react';
 import { CheckCircle2, Loader2, Mail, Phone, Send } from 'lucide-react';
 import { PLANS, TOUR, type PlanName } from '@/data/tour';
 import { formatPhone, isCompletePhone } from '@/lib/phoneMask';
-import { supabase } from '@/lib/supabase';
 
 type RequestSectionProps = {
   selectedPlan: PlanName;
@@ -48,27 +47,36 @@ export default function RequestSection({ selectedPlan, onPlanChange }: RequestSe
     if (field in errors) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const found = validate(form);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
 
     setStatus('submitting');
-    const { error } = await supabase.from('tour_requests').insert({
-      name: form.name.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim(),
-      plan: selectedPlan,
-      comment: form.comment.trim() || null,
-    });
-
-    if (error) {
-      setStatus('error');
-      return;
-    }
-    setForm(EMPTY_FORM);
-    setStatus('success');
+    fetch('http://localhost:8000/api/bookings/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        plan: selectedPlan,
+        comment: form.comment.trim(),
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Booking failed');
+        return res.json();
+      })
+      .then(() => {
+        setForm(EMPTY_FORM);
+        setStatus('success');
+      })
+      .catch((err) => {
+        console.error('Booking error:', err);
+        setStatus('error');
+      });
   };
 
   const fieldClass = (field: keyof FormErrors) => `${inputBase} ${errors[field] ? inputError : inputOk}`;

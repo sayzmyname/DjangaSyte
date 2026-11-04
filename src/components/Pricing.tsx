@@ -1,11 +1,50 @@
+import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
-import { PLANS, type PlanName } from '@/data/tour';
+import { PLANS, type PlanName, type Plan } from '@/data/tour';
 
 type PricingProps = {
   onSelectPlan: (plan: PlanName) => void;
 };
 
 export default function Pricing({ onSelectPlan }: PricingProps) {
+  const [plans, setPlans] = useState<Plan[]>(PLANS);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/tours/')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch tariffs');
+        return res.json();
+      })
+      .then((data) => {
+        if (
+          Array.isArray(data) &&
+          data.length > 0 &&
+          Array.isArray(data[0].tariffs) &&
+          data[0].tariffs.length > 0
+        ) {
+          const apiTariffs = data[0].tariffs;
+          setPlans((prevPlans) =>
+            prevPlans.map((p) => {
+              const matched = apiTariffs.find(
+                (t: any) => t.name.toLowerCase() === p.name.toLowerCase()
+              );
+              if (!matched) return p;
+              return {
+                ...p,
+                price: `${Number(matched.price).toLocaleString('ru-RU')} ₽`,
+                description: matched.description || p.description,
+                spotsLeft:
+                  matched.spots_left !== undefined ? matched.spots_left : p.spotsLeft,
+              };
+            })
+          );
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching tariffs:', err);
+      });
+  }, []);
+
   return (
     <section id="tariffs" className="tariffs bg-navy-50 py-24 md:py-32">
       <div className="mx-auto max-w-6xl px-6">
@@ -18,7 +57,7 @@ export default function Pricing({ onSelectPlan }: PricingProps) {
         </div>
 
         <div className="mt-16 grid items-stretch gap-8 md:grid-cols-3">
-          {PLANS.map((plan) => (
+          {plans.map((plan) => (
             <article
               key={plan.name}
               className={`tariff-card relative flex flex-col rounded-2xl bg-white p-8 transition duration-300 hover:-translate-y-1 hover:shadow-xl ${

@@ -1,7 +1,40 @@
+import { useState, useEffect } from 'react';
 import { Quote, Star } from 'lucide-react';
 import { REVIEWS } from '@/data/tour';
 
+type ReviewItem = {
+  name: string;
+  age?: number | string;
+  rating: number;
+  text: string;
+};
+
 export default function Reviews() {
+  const [reviews, setReviews] = useState<ReviewItem[]>(REVIEWS);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/reviews/')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch reviews');
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setReviews(
+            data.map((r: any) => ({
+              name: r.author_name || 'Участник',
+              age: r.age || 29,
+              rating: r.rating,
+              text: r.text,
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching reviews:', err);
+      });
+  }, []);
+
   return (
     <section id="reviews" className="bg-white py-24 md:py-32">
       <div className="mx-auto max-w-6xl px-6">
@@ -11,9 +44,9 @@ export default function Reviews() {
         </div>
 
         <div className="mt-16 grid gap-6 md:grid-cols-3">
-          {REVIEWS.map((review) => (
+          {reviews.map((review, idx) => (
             <figure
-              key={review.name}
+              key={`${review.name}-${idx}`}
               className="review-card flex flex-col rounded-2xl border border-navy-100 bg-navy-50/50 p-8 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
               <Quote className="h-8 w-8 text-accent-500" />
@@ -29,7 +62,7 @@ export default function Reviews() {
                 {review.text}
               </blockquote>
               <figcaption className="mt-8 border-t border-navy-100 pt-6 font-semibold text-navy-900">
-                {review.name}, {review.age}
+                {review.name}{review.age ? `, ${review.age}` : ''}
               </figcaption>
             </figure>
           ))}

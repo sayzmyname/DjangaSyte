@@ -1,6 +1,48 @@
+import { useState, useEffect } from 'react';
 import { PROGRAM } from '@/data/tour';
 
+type ProgramDay = {
+  date: string;
+  title: string;
+  text: string;
+  highlighted?: boolean;
+};
+
 export default function Program() {
+  const [program, setProgram] = useState<ProgramDay[]>(PROGRAM);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/tours/')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch tour program');
+        return res.json();
+      })
+      .then((data) => {
+        if (
+          Array.isArray(data) &&
+          data.length > 0 &&
+          Array.isArray(data[0].days) &&
+          data[0].days.length > 0
+        ) {
+          const apiDays = data[0].days;
+          setProgram((prev) =>
+            prev.map((day, idx) => {
+              const matched = apiDays.find((d: any) => d.day_number === idx + 1);
+              if (!matched) return day;
+              return {
+                ...day,
+                title: matched.title || day.title,
+                text: matched.description || day.text,
+              };
+            })
+          );
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching program:', err);
+      });
+  }, []);
+
   return (
     <section id="program" className="bg-white py-24 md:py-32">
       <div className="mx-auto max-w-6xl px-6">
@@ -14,11 +56,11 @@ export default function Program() {
 
         <ol className="relative mx-auto mt-16 max-w-2xl">
           <span aria-hidden="true" className="absolute bottom-6 left-6 top-6 w-px bg-navy-100" />
-          {PROGRAM.map((item, index) => {
+          {program.map((item, index) => {
             const dayNumber = index + 1;
             return (
               <li
-                key={item.date}
+                key={item.date || dayNumber}
                 data-day={dayNumber}
                 className="tour-day relative pb-10 pl-20 last:pb-0"
               >

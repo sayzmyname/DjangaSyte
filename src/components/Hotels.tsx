@@ -1,7 +1,56 @@
+import { useState, useEffect } from 'react';
 import { Bed, Star } from 'lucide-react';
 import { HOTELS } from '@/data/tour';
 
+type HotelItem = {
+  name: string;
+  stars: number;
+  image: string;
+  text: string;
+  amenities: string[];
+};
+
 export default function Hotels() {
+  const [hotels, setHotels] = useState<HotelItem[]>(HOTELS);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/tours/')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch hotels');
+        return res.json();
+      })
+      .then((data) => {
+        if (
+          Array.isArray(data) &&
+          data.length > 0 &&
+          Array.isArray(data[0].hotels) &&
+          data[0].hotels.length > 0
+        ) {
+          const apiHotels = data[0].hotels;
+          setHotels((prev) =>
+            prev.map((hotel, idx) => {
+              const matched =
+                apiHotels.find(
+                  (h: any) => h.name.toLowerCase() === hotel.name.toLowerCase()
+                ) || apiHotels[idx];
+              if (!matched) return hotel;
+              return {
+                ...hotel,
+                name: matched.name || hotel.name,
+                text: matched.description || hotel.text,
+                amenities: matched.features
+                  ? matched.features.split(',').map((f: string) => f.trim())
+                  : hotel.amenities,
+              };
+            })
+          );
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching hotels:', err);
+      });
+  }, []);
+
   return (
     <section id="hotels" className="bg-navy-50 py-24 md:py-32">
       <div className="mx-auto max-w-6xl px-6">
@@ -14,7 +63,7 @@ export default function Hotels() {
         </div>
 
         <div className="mt-16 grid gap-8 md:grid-cols-2">
-          {HOTELS.map((hotel) => (
+          {hotels.map((hotel) => (
             <article
               key={hotel.name}
               className="hotel-card group overflow-hidden rounded-2xl bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
